@@ -1,12 +1,7 @@
 from diffractio import sp, nm, plt, np, mm, degrees, um
 from diffractio.scalar_sources_XY import Scalar_source_XY
-from diffractio.scalar_sources_X import Scalar_source_X
-from diffractio.scalar_fields_XY import Scalar_field_XY
 from diffractio.scalar_masks_XY import Scalar_mask_XY
-from diffractio.scalar_masks_X import Scalar_mask_X
 from diffractio.scalar_masks_XYZ import Scalar_mask_XYZ
-#from cv2 import cv2
-import matplotlib.cm as cm
 
 x0 = np.linspace(-0.5 * mm, 0.5 * mm, 4000)
 y0 = np.linspace(-0.5 * mm, 0.5 * mm, 4000)
@@ -37,22 +32,14 @@ nozzle.square(r0=(-0.7* mm, 0 * mm, 6.5 * mm),
               refraction_index=1.3+7j,
               angles=(0 * degrees,0 * degrees,0 * degrees),
               rotation_point=0)
-"""
-nozzle.draw_refraction_index(draw_borders=True,
-                             min_incr=0.01,
-                             colormap_kind=cm.Blues,
-                             colorbar_kind='vertical')
-plt.show()
-"""
+
 nozzle.incident_field(u1)
 
-"""
-nozzle.smooth_refraction_index(type_filter=2, pixels_filtering=25)
+#nozzle.smooth_refraction_index(type_filter=2, pixels_filtering=25)
 
 nozzle.incident_field(u0)
-"""
 nozzle.clear_field()
-nozzle.WPM(verbose=False)
+nozzle.WPM(verbose=True)
 # nozzle.normalize()
 
 nozzle.draw_XZ(y0=0, kind='intensity',
