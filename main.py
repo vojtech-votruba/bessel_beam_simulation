@@ -1,10 +1,18 @@
-from diffractio import sp, nm, plt, np, mm, degrees, um
+from diffractio import nm, plt, np, mm, degrees, um
 from diffractio.scalar_sources_XY import Scalar_source_XY
 from diffractio.scalar_masks_XY import Scalar_mask_XY
 from diffractio.scalar_masks_XYZ import Scalar_mask_XYZ
 
-x0 = np.linspace(-0.5 * mm, 0.5 * mm, 4000)
-y0 = np.linspace(-0.5 * mm, 0.5 * mm, 4000)
+"""Rozměr trysky zatím uvažuj 10mm šířka,
+   horní hrana cca 10-12mm pod středem svazku (na finálním designu se ještě pracuje).  
+   Axikon reflexní, úhel 3°, šířka svazku 55mm.
+   Můžeš to pro začátek zkusit nějak naškálovat,
+   aby ti to šlo spustit a spočítat."""
+
+SCALING_FACTOR = 1/1000
+
+x0 = np.linspace(-0.5 * mm, 0.5 * mm, 400)
+y0 = np.linspace(-0.5 * mm, 0.5 * mm, 400)
 z0 = np.linspace(0 * mm, 20 * mm, 10)
 wavelength = 0.8 * um
 
@@ -15,7 +23,7 @@ u0.gauss_beam(A=1, r0 = (0 * um, 0 * um), z0=0 * um, w0=300 * um, theta=0 * degr
 t1 = Scalar_mask_XY(x0, y0, wavelength)
 t1.axicon(r0=(0 * mm, 0 * mm),
           radius=0.49 * mm,
-          angle=5*degrees,
+          angle=3*degrees,
           refraction_index=1.5,
           reflective=False)
 
@@ -36,9 +44,6 @@ nozzle.square(r0=(-0.7* mm, 0 * mm, 6.5 * mm),
 nozzle.incident_field(u1)
 
 #nozzle.smooth_refraction_index(type_filter=2, pixels_filtering=25)
-
-nozzle.incident_field(u0)
-nozzle.clear_field()
 nozzle.WPM(verbose=True)
 # nozzle.normalize()
 
