@@ -1,0 +1,17 @@
+# Rozměr trysky zatím uvažuj 10mm šířka,
+# horní hrana cca 10-12mm pod středem svazku (na finálním designu se ještě pracuje).  
+# Axikon reflexní, úhel 3°, šířka svazku 55mm.
+# Můžeš to pro začátek zkusit nějak naškálovat,
+# aby ti to šlo spustit a spočítat.
+
+[nozzle]
+dist_z = 30 # mm
+dist_x = -15 # mm
+y_size = 10 # mm
+z_size = 100 # mm
+
+[wave]
+size = 55 # mm
+
+[axicone]
+angle = 3 # dg

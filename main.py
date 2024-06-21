@@ -1,49 +1,65 @@
-from diffractio import nm, plt, np, mm, degrees, um
+from diffractio import plt, np, mm, degrees, um
 from diffractio.scalar_sources_XY import Scalar_source_XY
 from diffractio.scalar_masks_XY import Scalar_mask_XY
 from diffractio.scalar_masks_XYZ import Scalar_mask_XYZ
 
-"""Rozměr trysky zatím uvažuj 10mm šířka,
-   horní hrana cca 10-12mm pod středem svazku (na finálním designu se ještě pracuje).  
-   Axikon reflexní, úhel 3°, šířka svazku 55mm.
-   Můžeš to pro začátek zkusit nějak naškálovat,
-   aby ti to šlo spustit a spočítat."""
+"""
+Problematic - at least for now. The shrinking of the grid shrinks
+not only the computational domain, but also the optical elements used in the model
+(axicone, nozzle). Might try something with it in the future.
 
-SCALING_FACTOR = 1/1000
+def squared_space(start: float, stop: float, num: int):
+    relative = np.linspace(0, 1, int(num/2)) ** 0.5
+    return np.array(list(relative * (stop-start)/2 + start) + list(relative * (start-stop)/2 + stop)[::-1])
 
-x0 = np.linspace(-0.5 * mm, 0.5 * mm, 400)
-y0 = np.linspace(-0.5 * mm, 0.5 * mm, 400)
-z0 = np.linspace(0 * mm, 20 * mm, 10)
-wavelength = 0.8 * um
+"""
+
+constants = {
+    "nozzle": {"dist_z": 30, # mm
+        "dist_x": -15, # mm
+        "y_size": 10, # mm
+        "z_size": 100,}, # mm
+    "wave": {"size": 55}, # mm
+    "axicon": {"angle": 3}, # dg
+}
+
+x0 = np.linspace(-(constants["wave"]["size"]+5)/2*mm, (constants["wave"]["size"]+5)/2*mm, 2000) 
+y0 = np.linspace(-(constants["wave"]["size"]+5)/2*mm, (constants["wave"]["size"]+5)/2*mm, 2000)
+z0 = np.linspace(0*mm, (constants["nozzle"]["z_size"] + constants["nozzle"]["dist_z"]+5)*mm, 15)
+wavelength = 0.8*um
 
 u0 = Scalar_source_XY(x0, y0, wavelength)
-# u0.plane_wave(A=1, theta=0 * degrees)
-u0.gauss_beam(A=1, r0 = (0 * um, 0 * um), z0=0 * um, w0=300 * um, theta=0 * degrees)
+u0.plane_wave(A=1, theta=0 * degrees)
 
 t1 = Scalar_mask_XY(x0, y0, wavelength)
-t1.axicon(r0=(0 * mm, 0 * mm),
-          radius=0.49 * mm,
-          angle=3*degrees,
+t1.square(r0=(0*mm, 0*mm),
+          size=constants["wave"]["size"]*mm,
+          angle=0*degrees)
+
+t2 = Scalar_mask_XY(x0, y0, wavelength)
+t2.axicon(r0=(0*mm, 0*mm),
+          radius=constants["wave"]["size"]/2*mm,
+          angle=constants["axicon"]["angle"]*degrees,
           refraction_index=1.5,
           reflective=False)
 
-t2 = Scalar_mask_XY(x0, y0, wavelength)
-t2.circle(r0=(0, 0 * mm),
-          radius=0.485 * mm,
-          angle=0 * degrees)
-
-u1 = u0*t2*t1
+u1 = u0*t1*t2
 
 nozzle = Scalar_mask_XYZ(x0, y0, z0, wavelength, n_background=1.0, info='')
-nozzle.square(r0=(-0.7* mm, 0 * mm, 6.5 * mm),
-              length=(1.2 * mm, 0.15 * mm, 13 * mm),
+nozzle.square(r0=((-(constants["wave"]["size"]/2 + constants["nozzle"]["dist_x"])/2 + constants["nozzle"]["dist_x"])*mm, 
+                  0*mm, 
+                  (constants["nozzle"]["z_size"]/2 + constants["nozzle"]["dist_z"])*mm), # the X and Y coordinates are inverted.
+              length=((constants["wave"]["size"]/2 + constants["nozzle"]["dist_x"])*mm, 
+                      constants["nozzle"]["y_size"]*mm, 
+                      constants["nozzle"]["z_size"]*mm),
               refraction_index=1.3+7j,
-              angles=(0 * degrees,0 * degrees,0 * degrees),
+              angles=(0*degrees, 0*degrees, 0*degrees),
               rotation_point=0)
 
 nozzle.incident_field(u1)
 
-#nozzle.smooth_refraction_index(type_filter=2, pixels_filtering=25)
+
+# nozzle.smooth_refraction_index(type_filter=2, pixels_filtering=25)
 nozzle.WPM(verbose=True)
 # nozzle.normalize()
 
@@ -52,7 +68,7 @@ nozzle.draw_XZ(y0=0, kind='intensity',
           normalize=None,
           colorbar_kind='vertical')
 
-nozzle.draw_XY(z0=4.9*mm, kind='intensity',
+nozzle.draw_XY(z0=120*mm, kind='intensity',
           logarithm=1e1,
           normalize=None)
 plt.show()
