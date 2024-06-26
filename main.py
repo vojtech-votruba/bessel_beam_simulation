@@ -23,8 +23,8 @@ constants = {
     "axicon": {"angle": 3}, # dg
 }
 
-x0 = np.linspace(-(constants["wave"]["size"]+5)/2*mm, (constants["wave"]["size"]+5)/2*mm, 2000) 
-y0 = np.linspace(-(constants["wave"]["size"]+5)/2*mm, (constants["wave"]["size"]+5)/2*mm, 2000)
+x0 = np.linspace(-(constants["wave"]["size"]+5)/2*mm, (constants["wave"]["size"]+5)/2*mm, 2500) 
+y0 = np.linspace(-(constants["wave"]["size"]+5)/2*mm, (constants["wave"]["size"]+5)/2*mm, 2500)
 z0 = np.linspace(0*mm, (constants["nozzle"]["z_size"] + constants["nozzle"]["dist_z"]+5)*mm, 15)
 wavelength = 0.8*um
 
@@ -41,9 +41,9 @@ t2.axicon(r0=(0*mm, 0*mm),
           radius=constants["wave"]["size"]/2*mm,
           angle=constants["axicon"]["angle"]*degrees,
           refraction_index=1.5,
-          reflective=False)
+          reflective=True)
 
-u1 = u0*t1*t2
+u1 = u0 * t1* t2
 
 nozzle = Scalar_mask_XYZ(x0, y0, z0, wavelength, n_background=1.0, info='')
 nozzle.square(r0=((-(constants["wave"]["size"]/2 + constants["nozzle"]["dist_x"])/2 + constants["nozzle"]["dist_x"])*mm, 
@@ -58,17 +58,25 @@ nozzle.square(r0=((-(constants["wave"]["size"]/2 + constants["nozzle"]["dist_x"]
 
 nozzle.incident_field(u1)
 
-
-# nozzle.smooth_refraction_index(type_filter=2, pixels_filtering=25)
-nozzle.WPM(verbose=True)
+nozzle.WPM(verbose=True, has_edges=True)
 # nozzle.normalize()
 
 nozzle.draw_XZ(y0=0, kind='intensity',
           logarithm=1e1,
           normalize=None,
-          colorbar_kind='vertical')
+          colorbar_kind='vertical',
+          draw_borders = True,)
+
+nozzle.draw_XY(z0=20*mm, kind='intensity',
+          logarithm=1e1,
+          normalize=None,)
+
+nozzle.draw_XY(z0=60*mm, kind='intensity',
+          logarithm=1e1,
+          normalize=None,)   
 
 nozzle.draw_XY(z0=120*mm, kind='intensity',
           logarithm=1e1,
-          normalize=None)
+          normalize=None,)       
+
 plt.show()
