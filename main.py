@@ -23,8 +23,8 @@ constants = {
     "axicon": {"angle": 3}, # dg
 }
 
-x0 = np.linspace(-(constants["wave"]["size"]+5)/2*mm, (constants["wave"]["size"]+5)/2*mm, 2500) 
-y0 = np.linspace(-(constants["wave"]["size"]+5)/2*mm, (constants["wave"]["size"]+5)/2*mm, 2500)
+x0 = np.linspace(-(constants["wave"]["size"]+5)/2*mm, (constants["wave"]["size"]+5)/2*mm, 1000) 
+y0 = np.linspace(-(constants["wave"]["size"]+5)/2*mm, (constants["wave"]["size"]+5)/2*mm, 1000)
 z0 = np.linspace(0*mm, (constants["nozzle"]["z_size"] + constants["nozzle"]["dist_z"]+5)*mm, 15)
 wavelength = 0.8*um
 
@@ -66,6 +66,10 @@ nozzle.draw_XZ(y0=0, kind='intensity',
           normalize=None,
           colorbar_kind='vertical',
           draw_borders = True,)
+
+nozzle.draw_XY(z0=0*mm, kind='intensity',
+          logarithm=1e1,
+          normalize=None,)
 
 nozzle.draw_XY(z0=20*mm, kind='intensity',
           logarithm=1e1,
