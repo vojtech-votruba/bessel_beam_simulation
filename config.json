@@ -1,0 +1,12 @@
+{
+    "nozzle": {"dist_z": 30,
+        "slope_height": 3.4,
+        "slope_lower": 10,
+        "slope_upper": 3.2,
+        "dist_x": -5,
+        "y_size": 10,
+        "z_size": 105}, 
+    "region": {"size": 60},
+    "axicon": {"angle": 3},
+    "wavelength": 0.8
+}

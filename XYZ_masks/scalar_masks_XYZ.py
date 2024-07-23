@@ -181,7 +181,7 @@ class Scalar_mask_XYZ(Scalar_field_XYZ):
 
         return ipasa
     
-    def triangle_prism(self, r0, refractive_index, length, triangle_height, triangle_base,):
+    def prism(self, r0, refractive_index, length, height, lower_base, upper_base):
         """ Insert a triangular prism in background. If something previous, is removed.
 
         The orientation is such that the basis is parallel with the y axis, 
@@ -195,15 +195,15 @@ class Scalar_mask_XYZ(Scalar_field_XYZ):
             triangle_basis: The size of the basis of the triangle
         """
 
+        triangle_base = (lower_base + upper_base)/2
         x0, y0, z0 = r0
         ipasax1 = self.X - x0 >= 0
-        ipasax2 = self.X - x0 <= triangle_height
-        ipasay1 = self.Y - y0 >= -triangle_base / 2 + triangle_base / (2 * triangle_height) * self.X
-        #Tady vzniká memory problem a numpy ho zabíjí
-        ipasay2 = self.Y - y0 <= triangle_base / 2 - triangle_base / (2 * triangle_height) * self.X
+        ipasax2 = self.X - x0 <= height
+        ipasay1 = self.Y - y0 >= -lower_base/2 + triangle_base/(2 * height) * (self.X-x0)
+        ipasay2 = self.Y - y0 <= lower_base/2 - triangle_base/(2 * height) * (self.X-x0)
         ipasaz1 = self.Z - z0 >= -length / 2
         ipasaz2 = self.Z - z0 <= length / 2
-
+        
         ipasa = ipasax1 * ipasax2 * ipasay1 * ipasay2 * ipasaz1 * ipasaz2
         self.n[ipasa] = refractive_index
         return ipasa
