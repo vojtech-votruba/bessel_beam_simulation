@@ -1,8 +1,25 @@
+README.md
 # Bessel beam simulation
 Simulation of a beam propagating through an axicon and diffracting on a plasma nozzle for electron acceleration experiments.
 The code is using WPM - Wave Propagation Method.
 Main parts of the project are: simulate.py and analytical_solution.py, the former is used for the actual simulation while the latter
 is for comparison purposes, and calculates the intensity field analytically for the cases without any obstacles.
+
+# How to run it
+Firstly, you should install the used libraries via
+```
+pip install -r /path/to/bessel-beam-simulation/requirements.txt
+```
+If you use conda, you need to write
+```
+conda install --yes --file /path/to/bessel-beam-simulation/requirements.txt
+```
+I highly encourage using a virutal environment for this. diffractio as a library isn't particullary stable, and you don't want to mess up your python installation.
+
+After you installed the libraries you should be ready to go. For simulate.py there is an option to use the argument `--obstacle` or `--no-obstacle`
+to run the simulation with the plasma nozzle.
+
+All constants and parameters used in the simulation are stored in config.json file.
 
 # Things to be aware of in diffractio
 - Refractive index vs. Refraction index

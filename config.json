@@ -8,5 +8,11 @@
         "z_size": 105}, 
     "region": {"size": 60},
     "axicon": {"angle": 3},
-    "wavelength": 0.8
+    "laser": {
+        "wavelength": 0.8,
+        "total_energy": 10,
+        "total_surface": 45796,
+        "pulse_length": 28e-15,
+        "radius": 29.5
+    }
 }

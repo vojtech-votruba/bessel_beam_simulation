@@ -3,26 +3,39 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.special import jv
 
+"""All constants for this simulation are stored in the config.json file
+"""
+
 with open("config.json", encoding="utf-8") as f:
     CONSTANTS = json.load(f)
 
-WAVELENGTH = CONSTANTS["wavelength"] / 1000
+""" All length constants used are inputed in millimeters,
+the energy is inputed in joules, length of the pulse is in seconds. 
+"""
+
+W0 = CONSTANTS["laser"]["radius"]
+TOTAL_ENERGY = CONSTANTS["laser"]["total_energy"]
+TOTAL_SURFACE = CONSTANTS["laser"]["total_surface"]
+AT = CONSTANTS["laser"]["pulse_length"]
+WAVELENGTH = CONSTANTS["laser"]["wavelength"] / 1000
 ANGLE = CONSTANTS["axicon"]["angle"] / 180 * np.pi
 Z_MAX = CONSTANTS["nozzle"]["z_size"] + CONSTANTS["nozzle"]["dist_z"]
 REGION_SIZE = CONSTANTS["region"]["size"] / 1000
 XY_PROFILES = [20,60,120]
 
+ENERGY = TOTAL_ENERGY / TOTAL_SURFACE * np.pi * W0**2
+POWER = 2*np.sqrt(np.log(2)/np.pi) * ENERGY/AT
+I0 = POWER / (np.pi*W0**2) * 100 # W / cm^2
 
-def intensity(z_: float, rho_: float) -> float:
+def intensity(z_: float, rho_) -> float:
     """A formula for calculating the intensity of a plane wave which passed through an axicon.
-    The variables are 
-        rho_; radius in cylindrical coordinates
+    The variables are , TOTAL_ENERGY, TOTAL_SURFACE,
+        rho_; radius variable in cylindrical coordinates
         z_; the z coordinate in cylindrical coordinates.
-    Axicons in general have axial symmetry, therefore the intensity doesn't depend on φ.
+    Axicons have axial symmetry, therefore the intensity doesn't depend on φ.
     Source: https://ora.ox.ac.uk/objects/uuid:aa7a03d0-2d64-423f-be42-40e01479d312
     """
     k = 2*np.pi / WAVELENGTH
-    I0 = 1 # Intensity of the incoming plane wave
     return 2*np.pi * k * z_ * I0 * ANGLE**2 * jv(0, k * ANGLE * rho_)**2
 
 z = np.linspace(0, Z_MAX, 30)
@@ -35,9 +48,10 @@ for i in range(z.size):
         I_field[i,j] = intensity(z[i], rho[j])
 
 fig,ax = plt.subplots(nrows=2,ncols=2)
-ax[0,0].imshow(I_field.T, cmap="hot",aspect="auto",extent=(0,Z_MAX,-REGION_SIZE/2,REGION_SIZE/2))
+pos = ax[0,0].imshow(I_field.T, cmap="hot",aspect="auto",extent=(0,Z_MAX,-REGION_SIZE/2,REGION_SIZE/2))
 print("XZ profile done!")
 
+fig.colorbar(pos, ax=ax[0,0], label="I (W/mm^2)")
 ax[0,0].set_title("xz profile")
 ax[0,0].set_xlabel("z (mm)")
 ax[0,0].set_ylabel("x (mm)")
@@ -50,11 +64,12 @@ for seq,z0 in enumerate(XY_PROFILES):
             I_field[i,j] = intensity(XY_PROFILES[seq], np.sqrt(rho[i]**2 + rho[j]**2))
 
     # (seq + 1) // 2, (seq + 1) % 2 is just a stupid method for selecting subplots in order.
-    ax[(seq + 1) // 2, (seq + 1) % 2].imshow(I_field.T,
+    pos = ax[(seq + 1) // 2, (seq + 1) % 2].imshow(I_field.T,
                                              cmap="hot",
                                              aspect="equal",
-                                             extent=(-REGION_SIZE/2,REGION_SIZE/2,-REGION_SIZE/2,REGION_SIZE/2))
+                                             extent=(-REGION_SIZE/2,REGION_SIZE/2,-REGION_SIZE/2,REGION_SIZE/2),)
     
+    fig.colorbar(pos, ax=ax[(seq + 1) // 2, (seq + 1) % 2], label="I (W/mm^2)")
     ax[(seq + 1) // 2, (seq + 1) % 2].set_title(f"xy profile in {z0} mm")
     ax[(seq + 1) // 2, (seq + 1) % 2].set_xlabel("y (mm)")
     ax[(seq + 1) // 2, (seq + 1) % 2].set_ylabel("x (mm)")
