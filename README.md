@@ -2,8 +2,8 @@ README.md
 # Bessel beam simulation
 Simulation of a beam propagating through an axicon and diffracting on a plasma nozzle for electron acceleration experiments.
 The code is using WPM - Wave Propagation Method.
-Main parts of the project are: simulate.py and analytical_solution.py, the former is used for the actual simulation while the latter
-is for comparison purposes, and calculates the intensity field analytically for the cases without any obstacles.
+Main parts of the project are: simulate.py and analytical_solution.py, the former is used for the actual numerical simulation while the latter
+is more for comparison purposes and calculates the intensity field analytically for the cases without any obstacles.
 
 # How to run it
 Firstly, you should install the used libraries via
