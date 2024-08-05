@@ -34,8 +34,8 @@ WAVELENGTH = CONSTANTS["laser"]["wavelength"] * um
 XY_PROFILES = [20,60,120]
 REGION_SIZE = CONSTANTS["region"]["size"]
 
-x = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, 10000)
-y = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, 10000)
+x = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, 1000)
+y = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, 1000)
 z = np.linspace(0*mm, (CONSTANTS["nozzle"]["z_size"]+CONSTANTS["nozzle"]["dist_z"]+5)*mm, 15)
 
 u0 = Scalar_source_XY(x, y, WAVELENGTH)
