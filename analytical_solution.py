@@ -3,14 +3,14 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.special import jv
 
-"""All constants for this simulation are stored in the config.json file
-"""
-
 with open("config.json", encoding="utf-8") as f:
     CONSTANTS = json.load(f)
 
-""" All length constants used are inputed in millimeters,
-the energy is inputed in joules, length of the pulse is in seconds. 
+""" 
+    All constants for this simulation are stored in the config.json file,
+    the length dimensions used are inputed in millimeters,
+    the energy is inputed in joules, length of the pulse is in seconds,
+    wavelength is inputed in um. 
 """
 
 W0 = CONSTANTS["laser"]["radius"]
@@ -48,10 +48,11 @@ for i in range(z.size):
         I_field[i,j] = intensity(z[i], rho[j])
 
 fig,ax = plt.subplots(nrows=2,ncols=2)
-pos = ax[0,0].imshow(I_field.T, cmap="hot",aspect="auto",extent=(0,Z_MAX,-REGION_SIZE/2,REGION_SIZE/2))
+pos = ax[0,0].imshow(I_field.T, cmap="hot",aspect="auto",
+                     extent=(0,Z_MAX,-REGION_SIZE/2,REGION_SIZE/2))
 print("XZ profile done!")
 
-fig.colorbar(pos, ax=ax[0,0], label="I (W/mm^2)")
+fig.colorbar(pos, ax=ax[0,0], label="I (W/cm^2)")
 ax[0,0].set_title("xz profile")
 ax[0,0].set_xlabel("z (mm)")
 ax[0,0].set_ylabel("x (mm)")
@@ -69,7 +70,7 @@ for seq,z0 in enumerate(XY_PROFILES):
                                              aspect="equal",
                                              extent=(-REGION_SIZE/2,REGION_SIZE/2,-REGION_SIZE/2,REGION_SIZE/2),)
     
-    fig.colorbar(pos, ax=ax[(seq + 1) // 2, (seq + 1) % 2], label="I (W/mm^2)")
+    fig.colorbar(pos, ax=ax[(seq + 1) // 2, (seq + 1) % 2], label="I (W/cm^2)")
     ax[(seq + 1) // 2, (seq + 1) % 2].set_title(f"xy profile in {z0} mm")
     ax[(seq + 1) // 2, (seq + 1) % 2].set_xlabel("y (mm)")
     ax[(seq + 1) // 2, (seq + 1) % 2].set_ylabel("x (mm)")

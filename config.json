@@ -5,7 +5,7 @@
         "slope_upper": 3.2,
         "dist_x": -5,
         "y_size": 10,
-        "z_size": 105}, 
+        "z_size": 105},
     "region": {"size": 60},
     "axicon": {"angle": 3},
     "laser": {
