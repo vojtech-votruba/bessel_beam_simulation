@@ -1,8 +1,8 @@
 import json
 import argparse
 from diffractio import np, plt, um, mm, degrees
-from diffractio.scalar_masks_XY import Scalar_mask_XY
-from diffractio.scalar_sources_XY import Scalar_source_XY
+from XY_masks.scalar_masks_XY import Scalar_mask_XY
+from XY_masks.scalar_sources_XY import Scalar_source_XY
 from XYZ_masks.scalar_masks_XYZ import Scalar_mask_XYZ
 
 parser = argparse.ArgumentParser()
@@ -31,21 +31,36 @@ I0 = POWER / (np.pi*W0**2)*100 # intensity of the incoming plane wave in W/cm^2;
 E0 = np.sqrt(2*I0 / (3e8 * 8.9e-12)) # amplitude of the electric field in V/cm
 
 WAVELENGTH = CONSTANTS["laser"]["wavelength"] * um
-XY_PROFILES = [20,60,120]
 REGION_SIZE = CONSTANTS["region"]["size"]
+Z_SIZE = CONSTANTS["nozzle"]["z_size"]+CONSTANTS["nozzle"]["dist_z"]+5
+Z_SIZE = 40
 
-x = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, 1000)
-y = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, 1000)
-z = np.linspace(0*mm, (CONSTANTS["nozzle"]["z_size"]+CONSTANTS["nozzle"]["dist_z"]+5)*mm, 15)
+
+Nx = int(REGION_SIZE*1000)
+Ny = int(REGION_SIZE*1000)
+Nz = int(np.round(0.8*Z_SIZE))
+
+print(f"In the x axis using {Nx/REGION_SIZE/1000} px/um with total of {Nx} px")
+print(f"In the y axis using {Ny/REGION_SIZE/1000} px/um with total of {Ny} px")
+print(f"In the z axis using {Nz/Z_SIZE/1000} px/um with total of {Nz} px")
+
+x = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, Nx)
+y = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, Ny)
+z = np.linspace(0*mm, Z_SIZE*mm, Nz)
 
 u0 = Scalar_source_XY(x, y, WAVELENGTH)
 u0.plane_wave(A=E0, theta=0*degrees)
 
 t0 = Scalar_mask_XY(x, y, WAVELENGTH)
-t0.axicon(r0=(0*mm, 0*mm),
-        radius=REGION_SIZE/2*mm,
+t0.circle(r0=(0*mm, 0*mm),
+          radius=REGION_SIZE/2*mm - 5/50*mm,
+          angle=0)
+
+t1 = Scalar_mask_XY(x, y, WAVELENGTH)
+t1.axicon(r0=(0*mm, 0*mm),
+        radius=REGION_SIZE/2*mm - 2/50*mm,
         angle=CONSTANTS["axicon"]["angle"]*degrees,
-        refraction_index=1.51,
+        refractive_index=1.51,
         reflective=True)
 
 uxyz = Scalar_mask_XYZ(x, y, z, WAVELENGTH)
@@ -71,7 +86,7 @@ if args.obstacle:
                 angles=(0*degrees, 0*degrees, 0*degrees),
                 rotation_point=0)
 
-uxyz.incident_field(u0*t0)
+uxyz.incident_field(u0*t0*t1)
 uxyz.clear_field()
 uxyz.WPM(verbose=True, has_edges=True)
 
@@ -80,8 +95,11 @@ uxyz.draw_XZ(y0=0, kind='intensity',
             colorbar_kind='vertical',
             draw_borders = True,)
 
+XY_PROFILES = [1, 2, 3]
+
 for z in XY_PROFILES:
-    uxyz.draw_XY(z0=z*mm, kind='intensity',
+    XY_cut = uxyz.cut_resample([-10,10], [-10,10], num_points=(128,128,128), new_field=True)
+    XY_cut.draw_XY(z0=z*mm, kind='intensity',
                 title=f"XY profile in {z} mm",
                 normalize=False,
                 has_colorbar=True,) # Doesn't work for some stupid reason

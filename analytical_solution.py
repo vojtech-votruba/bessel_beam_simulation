@@ -20,7 +20,8 @@ AT = CONSTANTS["laser"]["pulse_length"]
 WAVELENGTH = CONSTANTS["laser"]["wavelength"] / 1000
 ANGLE = CONSTANTS["axicon"]["angle"] / 180 * np.pi
 Z_MAX = CONSTANTS["nozzle"]["z_size"] + CONSTANTS["nozzle"]["dist_z"]
-REGION_SIZE = CONSTANTS["region"]["size"] / 1000
+Z_MAX = 200
+REGION_SIZE = CONSTANTS["region"]["size"] / 250
 XY_PROFILES = [20,60,120]
 
 ENERGY = TOTAL_ENERGY / TOTAL_SURFACE * np.pi * W0**2
@@ -39,7 +40,7 @@ def intensity(z_: float, rho_) -> float:
     return 2*np.pi * k * z_ * I0 * ANGLE**2 * jv(0, k * ANGLE * rho_)**2
 
 z = np.linspace(0, Z_MAX, 30)
-rho = np.linspace(-REGION_SIZE/2, REGION_SIZE/2, 300)
+rho = np.linspace(-REGION_SIZE/2, REGION_SIZE/2, 3000)
 
 # XZ Profile
 I_field = np.zeros((z.size, rho.size))

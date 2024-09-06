@@ -23,13 +23,13 @@ The magnitude is related to microns: `micron = 1.`
 """
 
 from diffractio import degrees, np, um
-from diffractio.scalar_fields_XYZ import Scalar_field_XYZ
+from .scalar_fields_XYZ import Scalar_field_XYZ
 
 
 class Scalar_mask_XYZ(Scalar_field_XYZ):
 
     def __init__(self, x, y, z, wavelength, n_background=1., info=''):
-        super().__init__(x, y, z, wavelength, n_background, info)
+        super().__init__(x,  y, z, wavelength, n_background, info)
         self.type = 'Scalar_mask_XYZ'
 
     def object_by_surfaces(self,
@@ -197,13 +197,23 @@ class Scalar_mask_XYZ(Scalar_field_XYZ):
 
         triangle_base = (lower_base + upper_base)/2
         x0, y0, z0 = r0
-        ipasax1 = self.X - x0 >= 0
+
+        #ipasax2 = np.memmap()
         ipasax2 = self.X - x0 <= height
+        
+        #ipasay1 = np.memmap()
         ipasay1 = self.Y - y0 >= -lower_base/2 + triangle_base/(2 * height) * (self.X-x0)
+        
+        #ipasay2 = np.memmap()
         ipasay2 = self.Y - y0 <= lower_base/2 - triangle_base/(2 * height) * (self.X-x0)
+
+        #ipasaz1 = np.memmap()
         ipasaz1 = self.Z - z0 >= -length / 2
+
+        #ipasaz2 = np.memmap()
         ipasaz2 = self.Z - z0 <= length / 2
         
-        ipasa = ipasax1 * ipasax2 * ipasay1 * ipasay2 * ipasaz1 * ipasaz2
+        #ipasa = np.memmap()
+        ipasa = (self.X - x0 >= 0) * ipasax2 * ipasay1 * ipasay2 * ipasaz1 * ipasaz2
         self.n[ipasa] = refractive_index
         return ipasa
