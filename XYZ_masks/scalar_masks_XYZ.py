@@ -199,13 +199,13 @@ class Scalar_mask_XYZ(Scalar_field_XYZ):
         x0, y0, z0 = r0
 
         #ipasax2 = np.memmap()
-        ipasax2 = self.X - x0 <= height
+        ipasax2 = self.Y - y0 <= height
         
         #ipasay1 = np.memmap()
-        ipasay1 = self.Y - y0 >= -lower_base/2 + triangle_base/(2 * height) * (self.X-x0)
+        ipasay1 = self.X - x0 >= -lower_base/2 + triangle_base/(2 * height) * (self.Y-y0)
         
         #ipasay2 = np.memmap()
-        ipasay2 = self.Y - y0 <= lower_base/2 - triangle_base/(2 * height) * (self.X-x0)
+        ipasay2 = self.X - x0 <= lower_base/2 - triangle_base/(2 * height) * (self.Y-y0)
 
         #ipasaz1 = np.memmap()
         ipasaz1 = self.Z - z0 >= -length / 2
@@ -214,6 +214,6 @@ class Scalar_mask_XYZ(Scalar_field_XYZ):
         ipasaz2 = self.Z - z0 <= length / 2
         
         #ipasa = np.memmap()
-        ipasa = (self.X - x0 >= 0) * ipasax2 * ipasay1 * ipasay2 * ipasaz1 * ipasaz2
+        ipasa = (self.Y - y0 >= 0) * ipasax2 * ipasay1 * ipasay2 * ipasaz1 * ipasaz2
         self.n[ipasa] = refractive_index
         return ipasa

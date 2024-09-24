@@ -109,8 +109,7 @@ class Scalar_field_XYZ(object):
             self.X, self.Y, self.Z = np.meshgrid(x, y, z)
             self.u0 = Scalar_field_XY(x, y, wavelength)
 
-            self.u = np.memmap("u_field.dat", dtype=complex, mode="w+", shape=self.X.shape)
-            self.u[:] = np.zeros_like(self.X, dtype=complex)[:]
+            self.u = np.zeros_like(self.X, dtype=complex)
             self.n = n_background * np.ones_like(self.X, dtype=complex)
         else:
             self.X = None
