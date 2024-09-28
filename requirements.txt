@@ -1,5 +1,4 @@
 diffractio==0.2.4
-matplotlib==3.7.2
 matplotlib==3.5.1
 numpy==1.21.5
 scipy==1.8.0

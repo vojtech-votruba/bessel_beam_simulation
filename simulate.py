@@ -3,17 +3,59 @@ import argparse
 from diffractio import np, plt, um, mm, degrees
 from diffractio.scalar_masks_XY import Scalar_mask_XY
 from diffractio.scalar_sources_XY import Scalar_source_XY
-from XYZ_masks.scalar_masks_XYZ import Scalar_mask_XYZ
-from wpm import wpm_2d 
-
+from diffractio.utils_math import get_k
+from diffractio.scalar_fields_XY import WPM_schmidt_kernel
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--obstacle", action=argparse.BooleanOptionalAction,
                     default="True", help="Do you want to add the obstacle to the simulation?")
 args = parser.parse_args()
 
+
+def wpm_2d(x, y, u_field,
+        num_points: int, wavelength: float, z0: float,
+        z_final: float, obstacle,):
+
+    """A modified algorithm from diffractio.py for propagating only with the XY scheme"""
+    
+    dz = (z_final - z0) / num_points
+    k0 = 2 * np.pi / wavelength
+    
+    kx = get_k(x, flavour='+')
+    ky = get_k(y, flavour='+')
+
+    KX, KY = np.meshgrid(kx, ky)
+    k_perp2 = KX**2 + KY**2
+
+    X,Y = np.meshgrid(x, y)
+
+    width_edge = 0.95*(x[-1] - x[0]) / 2
+    x_center = (x[-1] + x[0]) / 2
+    y_center = (y[-1] + y[0]) / 2
+
+    filter_x = np.exp(-(np.abs(X[:,:] - x_center) / width_edge)**80)
+    filter_y = np.exp(-(np.abs(Y[:,:] - y_center) / width_edge)**80)
+    filter_function = filter_x * filter_y
+
+    z = z0
+    for i in range(num_points):
+        if obstacle:
+            n_field = np.ones_like(X, dtype=complex)
+            if CONSTANTS["nozzle"]["dist_z"]*mm <= z <= CONSTANTS["nozzle"]["dist_z"]*mm + CONSTANTS["nozzle"]["z_size"]*mm:
+                square = (abs(X) < CONSTANTS["nozzle"]["x_size"]*mm) * (Y > - CONSTANTS["nozzle"]["dist_y"]*mm)
+                n_field[square] = 1.2+7j
+        else:
+            n_field = np.ones_like(X)
+
+        u_field[:,:] += WPM_schmidt_kernel(u_field[:, :], n_field[:, :], k0, k_perp2,
+                dz) * filter_function
+        print(f"{i+1}/{num_points}", sep='\r', end='\r')
+        
+        z += dz
+    return u_field
+
 """
-All constants for this simulation are stored in the config.json file.
+All of the constants for this simulation are stored in the config.json file.
 
 The length dimensions used are inputed in millimeters,
 the energy is inputed in joules, length of the pulse is in seconds,
@@ -29,12 +71,11 @@ TOTAL_SURFACE = CONSTANTS["laser"]["total_surface"]
 ENERGY = TOTAL_ENERGY / TOTAL_SURFACE * np.pi * W0**2
 AT = CONSTANTS["laser"]["pulse_length"]
 POWER = 2*np.sqrt(np.log(2)/np.pi) * ENERGY/AT
-I0 = POWER / (np.pi*W0**2)*100 # intensity of the incoming plane wave in W/cm^2; I = 1/2 ϵ c E^2
-E0 = np.sqrt(2*I0 / (3e8 * 8.9e-12)) # amplitude of the electric field in V/cm
-E0 = 1
+I0 = POWER / (np.pi*W0**2)*100 # Intensity of the incoming plane wave in W/cm^2; I = 1/2 ϵ c E^2
+E0 = np.sqrt(2*I0 / (3e8 * 8.9e-12)) # Amplitude of the electric field in V/cm
 
 WAVELENGTH = CONSTANTS["laser"]["wavelength"] * um
-REGION_SIZE = CONSTANTS["region"]["size"]/100
+REGION_SIZE = CONSTANTS["region"]["size"]/10
 
 Nx = int(1000*REGION_SIZE)
 Ny = int(1000*REGION_SIZE)
@@ -45,6 +86,7 @@ print(f"In the y axis using {Ny/REGION_SIZE/1000} px/um with total of {Ny} px")
 x = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, Nx)
 y = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, Ny)
 
+# Initiation of the field
 u0 = Scalar_source_XY(x, y, WAVELENGTH)
 u0.plane_wave(A=E0, theta=0*degrees)
 
@@ -62,33 +104,47 @@ t1.axicon(r0=(0*mm, 0*mm),
 
 u1 = u0 * t0 * t1
 
-# Field before the obstacle
-u2 = u1.RS(z=(CONSTANTS["nozzle"]["dist_z"]-5)* mm, verbose=True)
-u2.draw(kind="intensity")
+# Field before the obstacle using RS
+u_new = u1.RS(z=(CONSTANTS["nozzle"]["dist_z"]-5)* mm, verbose=True)
+u_new.draw(kind="intensity")
+
+u_new = u_new.u
 
 # Propagation through the obstacle
-u3 = wpm_2d(x, y, u2.u, 10*mm, wavelength=WAVELENGTH, z=40*mm)
-fig,ax = plt.subplots()
+PROFILE_LOCATIONS = [50*mm, 80*mm, 120*mm]
 
-ax.imshow(abs(u3)**2,
+for seq,location in enumerate(PROFILE_LOCATIONS):
+    print(f"Calulating the {seq+1}/{len(PROFILE_LOCATIONS)} profile with WPM")
+
+    if seq == 0:
+        distance = location - (CONSTANTS["nozzle"]["dist_z"]-5)* mm
+    else:
+        distance = location - PROFILE_LOCATIONS[seq-1]
+
+    Nz = int(distance/100)
+    print(f"In the z axis using {Nz/distance} px/um with total of {Nz} px")
+
+    if seq == 0:
+        u_new = wpm_2d(x, y, u_new, Nz, WAVELENGTH, (CONSTANTS["nozzle"]["dist_z"]-5)*mm, location, args.obstacle)
+
+    else:
+        u_new = wpm_2d(x, y, u_new, Nz, WAVELENGTH, PROFILE_LOCATIONS[seq-1], location, args.obstacle)
+    
+    plt.figure()
+    #plt.colorbar(plt.cm.ScalarMappable(cmap="hot", norm=None) , label="I (W/cm^2)")
+    plt.title(f"xy profile in {location/1000} mm")
+    plt.xlabel("y (mm)")
+    plt.ylabel("x (mm)")
+
+    plt.imshow(abs(u_new)**2, # Sem dopsat index lomu a reálnou intenzitu asi
         cmap="hot",
         aspect="equal",
-        extent=(-REGION_SIZE/2,REGION_SIZE/2,-REGION_SIZE/2,REGION_SIZE/2),)
+        extent=(-REGION_SIZE/2, REGION_SIZE/2, -REGION_SIZE/2, REGION_SIZE/2),)
 
 plt.show()
-breakpoint()
 
 
-
-
-Z_SIZE = CONSTANTS["nozzle"]["z_size"] + 5
-Nz = int(np.round(Z_SIZE))
-print(f"In the z axis using {Nz/Z_SIZE/1000} px/um with total of {Nz} px")
-z = np.linspace((CONSTANTS["nozzle"]["dist_z"]-5)*mm, (CONSTANTS["nozzle"]["dist_z"]+Z_SIZE)*mm, Nz)
-
-
-
-
+"""
 uxyz = Scalar_mask_XYZ(x, y, z, WAVELENGTH)
 
 if args.obstacle:
@@ -129,4 +185,4 @@ for z in XY_PROFILES:
                 normalize=False,
                 has_colorbar=True,) # Doesn't work for some stupid reason
 
-plt.show()
+plt.show()"""

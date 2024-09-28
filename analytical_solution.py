@@ -67,9 +67,9 @@ for seq,z0 in enumerate(XY_PROFILES):
 
     # (seq + 1) // 2, (seq + 1) % 2 is just a stupid method for selecting subplots in order.
     pos = ax[(seq + 1) // 2, (seq + 1) % 2].imshow(I_field.T,
-                                             cmap="hot",
-                                             aspect="equal",
-                                             extent=(-REGION_SIZE/2,REGION_SIZE/2,-REGION_SIZE/2,REGION_SIZE/2),)
+                                            cmap="hot",
+                                            aspect="equal",
+                                            extent=(-REGION_SIZE/2,REGION_SIZE/2,-REGION_SIZE/2,REGION_SIZE/2),)
     
     fig.colorbar(pos, ax=ax[(seq + 1) // 2, (seq + 1) % 2], label="I (W/cm^2)")
     ax[(seq + 1) // 2, (seq + 1) % 2].set_title(f"xy profile in {z0} mm")
