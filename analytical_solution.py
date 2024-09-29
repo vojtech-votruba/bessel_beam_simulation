@@ -21,8 +21,8 @@ WAVELENGTH = CONSTANTS["laser"]["wavelength"] / 1000
 ANGLE = CONSTANTS["axicon"]["angle"] / 180 * np.pi
 Z_MAX = CONSTANTS["nozzle"]["z_size"] + CONSTANTS["nozzle"]["dist_z"]
 Z_MAX = 200
-REGION_SIZE = CONSTANTS["region"]["size"] / 250
-XY_PROFILES = [20,60,120]
+REGION_SIZE = CONSTANTS["region"]["size"]
+XY_PROFILES = [1,2,3]
 
 ENERGY = TOTAL_ENERGY / TOTAL_SURFACE * np.pi * W0**2
 POWER = 2*np.sqrt(np.log(2)/np.pi) * ENERGY/AT
@@ -49,7 +49,7 @@ for i in range(z.size):
         I_field[i,j] = intensity(z[i], rho[j])
 
 fig,ax = plt.subplots(nrows=2,ncols=2)
-pos = ax[0,0].imshow(I_field.T, cmap="hot",aspect="auto",
+pos = ax[0,0].imshow(I_field.T, cmap="winter",aspect="auto",
                      extent=(0,Z_MAX,-REGION_SIZE/2,REGION_SIZE/2))
 print("XZ profile done!")
 
@@ -80,4 +80,8 @@ for seq,z0 in enumerate(XY_PROFILES):
 
 fig.tight_layout(pad=1.0)
 plt.style.use("ggplot")
+
+print(f"The plots are generated. However, procede with caution, the analytical solution assumes infinite energy.\
+      In a real situation the beam's core would end approximately at {REGION_SIZE/(CONSTANTS["axicon"]["angle"] / 180 * np.pi)} mm,
+      and the intensity would diverge.")
 plt.show()
