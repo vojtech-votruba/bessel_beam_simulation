@@ -1,16 +1,76 @@
+import psutil
 import json
 import argparse
 from diffractio import np, plt, um, mm, degrees
 from diffractio.scalar_masks_XY import Scalar_mask_XY
 from diffractio.scalar_sources_XY import Scalar_source_XY
 from diffractio.utils_math import get_k
-from diffractio.scalar_fields_XY import WPM_schmidt_kernel
+from scipy.fftpack import fft2, fftshift, ifft2
+from numpy.lib.scimath import sqrt as csqrt
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--obstacle", action=argparse.BooleanOptionalAction,
                     default="True", help="Do you want to add the obstacle to the simulation?")
 args = parser.parse_args()
 
+def PWD_kernel(u, n, k0, k_perp2, dz):
+    """
+    Step for scalar(TE) Plane wave decomposition(PWD) algorithm.
+
+    Parameters:
+        u(np.array): field
+        n(np.array): refraction index
+        k0(float): wavenumber
+        k_perp(np.array): transversal k
+        dz(float): increment in distances
+
+    Returns:
+        (numpy.array): Field at at distance dz from the incident field
+
+    References:
+        1. Schmidt, S. et al. Wave - optical modeling beyond the thin - element - approximation. Opt. Express 24, 30188 (2016).
+
+    """
+    absorption = 0.00
+
+    Ek = fftshift(fft2(u))
+    # H = np.exp(1j * dz * csqrt(n**2 * k0**2 - k_perp2.transpose()) - absorption)
+    H = np.exp(1j * dz * csqrt(n**2 * k0**2 - k_perp2) - absorption)
+
+    result = (ifft2(fftshift(H * Ek)))
+    return result
+
+def WPM_schmidt_kernel(u, n, k0, k_perp2, dz, z, z_min, z_max):
+    """
+    Kernel for fast propagation of WPM method
+
+    Parameters:
+        u (np.array): fields
+        n (np.array): refraction index
+        k0 (float): wavenumber
+        k_perp2 (np.array): transversal k**2
+        dz (float): increment in distances
+
+    References:
+
+        1. M. W. Fertig and K.-H. Brenner, “Vector wave propagation method,” J. Opt. Soc. Am. A, vol. 27, no. 4, p. 709, 2010.
+
+        2. S. Schmidt et al., “Wave-optical modeling beyond the thin-element-approximation,” Opt. Express, vol. 24, no. 26, p. 30188, 2016.
+    """
+    if z_min <= z <= z_max: # Stupid hardcoded optimizer
+        refractive_indexes = [np.complex64(1.0 + 0j), np.complex64(1.5 + 7j)]
+    else:
+        refractive_indexes = [np.complex64(1.0 + 0j)]
+
+    u_final = np.zeros_like(u, dtype=np.complex64)
+    for m, n_m in enumerate(refractive_indexes):
+        # print (m, n_m)
+        u_temp = PWD_kernel(u, n_m, k0, k_perp2, dz)
+        Imz = (n == n_m)
+        u_final = u_final + Imz * u_temp
+
+    return u_final
 
 def wpm_2d(x, y, u_field,
         num_points: int, wavelength: float, z0: float,
@@ -41,14 +101,14 @@ def wpm_2d(x, y, u_field,
     for i in range(num_points):
         if obstacle:
             if CONSTANTS["nozzle"]["dist_z"]*mm <= z <= CONSTANTS["nozzle"]["dist_z"]*mm + CONSTANTS["nozzle"]["z_size"]*mm:
-                n_field = np.ones_like(X, dtype=complex)
+                n_field = np.ones_like(X, dtype=np.complex64)
                 square = (abs(X) <= CONSTANTS["nozzle"]["x_size"]/2*mm) * (Y >= - CONSTANTS["nozzle"]["dist_y"]*mm)
-                n_field[square] = 1.2 + 7j # The refractive index of aluminum
+                n_field[square] = np.complex64(1.2 + 7j) # The refractive index of aluminum
 
                 triangle1 = (Y <= X + (-CONSTANTS["nozzle"]["dist_y"] - CONSTANTS["nozzle"]["slope_upper"]/2)*mm)
                 triangle2 = (Y <= -X + (-CONSTANTS["nozzle"]["dist_y"] - CONSTANTS["nozzle"]["slope_upper"]/2)*mm)
-                n_field[triangle1] = 1.0 + 0j
-                n_field[triangle2] = 1.0 + 0j
+                n_field[triangle1] = np.complex64(1.0 + 0j)
+                n_field[triangle2] = np.complex64(1.0 + 0j)
 
                 plt.imshow(abs(n_field)**2,
                         aspect="equal",
@@ -57,12 +117,12 @@ def wpm_2d(x, y, u_field,
                 plt.show()
 
             else:
-                n_field = np.ones_like(X, dtype=complex)
+                n_field = np.ones_like(X, dtype=np.complex64)
         else:
-            n_field = np.ones_like(X, dtype=complex)
+            n_field = np.ones_like(X, dtype=np.complex64)
 
         u_field[:,:] += WPM_schmidt_kernel(u_field[:, :], n_field[:, :], k0, k_perp2,
-                dz) * filter_function
+                dz, z) * filter_function
         print(f"{i+1}/{num_points}", sep='\r', end='\r')
         
         z += dz
@@ -93,40 +153,44 @@ WAVELENGTH = CONSTANTS["laser"]["wavelength"] * um
 SCALE = 1
 REGION_SIZE = CONSTANTS["region"]["size"] * SCALE
 
-Nx = int(100*REGION_SIZE)
-Ny = int(100*REGION_SIZE)
+Nx = int(1000*REGION_SIZE)
+Ny = int(1000*REGION_SIZE)
 
 print(f"In the x axis using {Nx/REGION_SIZE/1000} px/um with total of {Nx} px")
 print(f"In the y axis using {Ny/REGION_SIZE/1000} px/um with total of {Ny} px")
 
-x = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, Nx)
-y = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, Ny)
+x = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, Nx, dtype=np.float16)
+y = np.linspace(-REGION_SIZE/2*mm, REGION_SIZE/2*mm, Ny, dtype=np.float16)
+print(f"Available memory: {psutil.virtual_memory().available/1000000000} GB\n")
 
 # Initiation of the field
-u0 = Scalar_source_XY(x, y, WAVELENGTH)
-u0.plane_wave(A=E0, theta=0*degrees)
+def initialization(x_, y_, wavelength):
+    u0 = Scalar_source_XY(x_, y_, wavelength)
+    u0.plane_wave(A=E0, theta=0*degrees)
 
-t0 = Scalar_mask_XY(x, y, WAVELENGTH)
-t0.circle(r0=(0*mm, 0*mm),
-          radius=REGION_SIZE/2*mm - 5*SCALE*mm,
-          angle=0)
+    t0 = Scalar_mask_XY(x_, y_, wavelength)
+    t0.circle(r0=(0*mm, 0*mm),
+            radius=REGION_SIZE/2*mm - 5*SCALE*mm,
+            angle=0)
 
-t1 = Scalar_mask_XY(x, y, WAVELENGTH)
-t1.axicon(r0=(0*mm, 0*mm),
-        radius=REGION_SIZE/2*mm - 2*SCALE*mm,
-        angle=CONSTANTS["axicon"]["angle"]*degrees,
-        refraction_index=1.51,
-        reflective=True)
+    t1 = Scalar_mask_XY(x_, y_, wavelength)
+    t1.axicon(r0=(0*mm, 0*mm),
+            radius=REGION_SIZE/2*mm - 2*SCALE*mm,
+            angle=CONSTANTS["axicon"]["angle"]*degrees,
+            refraction_index=1.51,
+            reflective=True)
 
-u1 = u0 * t0 * t1
+    return np.complex64((u0 * t0 * t1).u)
 
-# Field before the obstacle using RS
-"""u_new = u1.RS(z=(CONSTANTS["nozzle"]["dist_z"]-5)* mm, verbose=True)
+u_new = initialization(x, y, WAVELENGTH)
+print("The field is initialized")
+print(f"Available memory: {psutil.virtual_memory().available/1000000000} GB\n")
+
+""" Field before the obstacle using RS
+u_new = u1.RS(z=(CONSTANTS["nozzle"]["dist_z"]-5)* mm, verbose=True)
 u_cut = u_new#.cut_resample([-10,10], [-10,10], num_points=(128,128), new_field=True)
 u_cut.draw(kind="intensity", title=f"xy profile in {CONSTANTS['nozzle']['dist_z']-5} mm using Rayleigh-Sommerfeld method")
 u_new = u_new.u"""
-
-u_new = u1.u
 
 # Propagation through the obstacle
 PROFILE_LOCATIONS = [50*mm*SCALE, 100*mm*SCALE]
