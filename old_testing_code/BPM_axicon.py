@@ -15,7 +15,7 @@ u0.plane_wave(A=1, theta=0 * degrees)
 t1 = Scalar_mask_XY(x0, y0, wavelength)
 t1.axicon(r0=(0 * mm, 0 * mm),
           radius=0.49 * mm,
-          angle=5*degrees,
+          angle=2.5*degrees,
           refraction_index=1.5,
           reflective=False)
 
@@ -29,10 +29,9 @@ u1 = u0*t2*t1 # Bessel beam created with axicon
 
 z0 = np.linspace(0 * mm, 20 * mm, 10)
 
-
 nozzle = Scalar_mask_XYZ(x0, y0, z0, wavelength, n_background=1.0, info='')
-nozzle.square(r0=(-0.7* mm, 0 * mm, 10 * mm),
-              length=(3 * mm, 1.2 * mm, 5 * mm),
+nozzle.square(r0=(-0.525* mm, 0 * mm, 9 * mm),
+              length=(1 * mm, 0.4 * mm, 10 * mm),
               refraction_index=1.3+7j,
               angles=(0 * degrees, 0 * degrees, 0 * degrees),
               rotation_point=0)
@@ -48,15 +47,11 @@ nozzle.draw_XZ(y0=0, kind='intensity',
           normalize=None,
           colorbar_kind='vertical')
 
-nozzle.draw_XY(z0=4*mm, kind='intensity',
+nozzle.draw_XY(z0=5*mm, kind='intensity',
           logarithm=1e1,
           normalize=None)
 
 nozzle.draw_XY(z0=10*mm, kind='intensity',
-          logarithm=1e1,
-          normalize=None)
-
-nozzle.draw_XY(z0=16*mm, kind='intensity',
           logarithm=1e1,
           normalize=None)
 
