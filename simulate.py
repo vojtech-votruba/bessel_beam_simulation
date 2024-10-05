@@ -414,7 +414,7 @@ if __name__ == "__main__":
 
     start = time.time()
     # Propagation through the obstacle
-    PROFILE_LOCATIONS = [50*mm*SCALE, 100*mm*SCALE]
+    PROFILE_LOCATIONS = [(CONSTANTS["nozzle"]["dist_z"]-2)*mm*SCALE, (CONSTANTS["nozzle"]["dist_z"]+2)*mm*SCALE, 50*mm*SCALE, 100*mm*SCALE]
 
 
     for seq,location in enumerate(PROFILE_LOCATIONS):
