@@ -197,32 +197,6 @@ class Scalar_mask_XY(Scalar_field_XY):
         else:
             self.u = u_mask * \
                 np.complex64(ne.evaluate("exp(-1j * k * (refractive_index - 1) * r * tan(angle)) * t_off_axis"))
-            
-    def circle(self, r0, radius, angle=0 * degrees):
-        """Creates a circle or an ellipse.
-
-        Parameters:
-            r0 (float, float): center of circle/ellipse
-            radius (float, float) or (float): radius of circle/ellipse
-            angle (float): angle of rotation in radians
-
-        Example:
-
-            circle(r0=(0 * um, 0 * um), radius=(250 * um, 125 * um), angle=0 * degrees)
-        """
-        x0, y0 = r0
-
-        if isinstance(radius, (float, int, complex)):
-            radiusx, radiusy = (radius, radius)
-        else:
-            radiusx, radiusy = radius
-
-        Xrot, Yrot = self.__rotate__(angle, (x0, y0))
-
-        u = np.zeros(np.shape(self.X))
-        ipasa = ne.evaluate("Xrot**2 / radiusx**2 + Yrot**2 / radiusy**2 < 1")
-        u[ipasa] = 1
-        self.u = u
 
 #@profile
 def PWD_kernel(u, n, k0, k_perp2, dz):
@@ -279,11 +253,12 @@ def WPM_schmidt_kernel(u, n, k0, k_perp2, dz, z, z_min, z_max):
     else:
         refractive_indexes = [np.complex64(1.0 + 0j)]
 
+    u_final = np.zeros(u.shape, dtype=np.complex64)
     for m, n_m in enumerate(refractive_indexes):
         # print (m, n_m)
         u_temp = PWD_kernel(u, n_m, k0, k_perp2, dz)
         Imz = ne.evaluate("n == n_m")
-        u_final = ne.evaluate("Imz * u_temp")
+        u_final += ne.evaluate("Imz * u_temp")
 
     return u_final
 
@@ -319,28 +294,26 @@ def wpm_2d(x, y, u_field,
     filter_function = filter()
 
     z = z0
+    if obstacle: 
+        n_field_normal = np.ones(X.shape, dtype=np.complex64)
+        n_field_bs = np.ones(X.shape, dtype=np.complex64)
+        square = (abs(X) <= CONSTANTS['nozzle']['x_size']/2*mm) * (Y >= - CONSTANTS['nozzle']['dist_y']*mm)
+        n_field_bs[square] = np.complex64(1.2 + 7j) # The refractive index of aluminum
+
+        triangle1 = Y <= X + (-CONSTANTS['nozzle']['dist_y'] - CONSTANTS['nozzle']['slope_upper']/2)*mm
+        triangle2 = Y <= -X + (-CONSTANTS['nozzle']['dist_y'] - CONSTANTS['nozzle']['slope_upper']/2)*mm
+        n_field_bs[triangle1] = np.complex64(1.0 + 0j)
+        n_field_bs[triangle2] = np.complex64(1.0 + 0j)
+    
+    else:
+        n_field = np.ones(X.shape, dtype=np.complex64)
+
     for i in range(num_points):
         if obstacle:
             if CONSTANTS["nozzle"]["dist_z"]*mm <= z <= CONSTANTS["nozzle"]["dist_z"]*mm + CONSTANTS["nozzle"]["z_size"]*mm:
-                n_field = np.ones(X.shape, dtype=np.complex64)
-                square = ne.evaluate("(abs(X) <= CONSTANTS['nozzle']['x_size']/2*mm) * (Y >= - CONSTANTS['nozzle']['dist_y']*mm)")
-                n_field[square] = np.complex64(1.2 + 7j) # The refractive index of aluminum
-
-                triangle1 = ne.evaluate("(Y <= X + (-CONSTANTS['nozzle']['dist_y'] - CONSTANTS['nozzle']['slope_upper']/2)*mm)")
-                triangle2 = ne.evaluate("(Y <= -X + (-CONSTANTS['nozzle']['dist_y'] - CONSTANTS['nozzle']['slope_upper']/2)*mm)")
-                n_field[triangle1] = np.complex64(1.0 + 0j)
-                n_field[triangle2] = np.complex64(1.0 + 0j)
-
-                plt.imshow(abs(n_field)**2,
-                        aspect="equal",
-                        extent=(-REGION_SIZE/2, REGION_SIZE/2, -REGION_SIZE/2, REGION_SIZE/2),)
-
-                plt.show()
-
+                n_field = n_field_bs
             else:
-                n_field = np.ones(X.shape, dtype=np.complex64)
-        else:
-            n_field = np.ones(X.shape, dtype=np.complex64)
+                n_field = n_field_normal
 
         kernel = WPM_schmidt_kernel(u_field, n_field, k0, k_perp2,
                 dz, z, CONSTANTS["nozzle"]["dist_z"]*mm, CONSTANTS["nozzle"]["dist_z"]*mm + CONSTANTS["nozzle"]["z_size"]*mm) * filter_function
@@ -372,11 +345,11 @@ def main():
         E0 = np.sqrt(I0) # Amplitude of the electric field in V/cm
 
         WAVELENGTH = CONSTANTS["laser"]["wavelength"] * um
-        SCALE = 1/20
+        SCALE = 1/2
         REGION_SIZE = CONSTANTS["region"]["size"] * SCALE
 
-        Nx = 2 ** int(np.round(np.log2(1000*REGION_SIZE)))
-        Ny = 2 ** int(np.round(np.log2(1000*REGION_SIZE)))
+        Nx = 2 ** int(np.round(np.log2(1000*REGION_SIZE)) - 3)
+        Ny = 2 ** int(np.round(np.log2(1000*REGION_SIZE)) - 3)
 
         print(f"In the x axis using {Nx/REGION_SIZE/1000} px/um with total of {Nx} px")
         print(f"In the y axis using {Ny/REGION_SIZE/1000} px/um with total of {Ny} px")
@@ -429,7 +402,7 @@ def main():
 
 
         for seq,location in enumerate(PROFILE_LOCATIONS):
-            print(f"Calulating the {seq+1}/{len(PROFILE_LOCATIONS)} profile with WPM")
+            print(f"Calulating the {seq+1}/{len(PROFILE_LOCATIONS)} profile in the location {location} mm with WPM")
 
             if seq == 0:
                 #distance = location - (CONSTANTS["nozzle"]["dist_z"]-5)* mm
@@ -438,7 +411,7 @@ def main():
                 distance = location - PROFILE_LOCATIONS[seq-1]
 
             if ((seq == 0 and (CONSTANTS["nozzle"]["dist_z"]*mm < location < mm*CONSTANTS["nozzle"]["dist_z"] + mm*CONSTANTS["nozzle"]["z_size"]))\
-                or ((PROFILE_LOCATIONS[seq-1] < mm*CONSTANTS["nozzle"]["dist_z"]) and (location < mm*CONSTANTS["nozzle"]["dist_z"] + mm*CONSTANTS["nozzle"]["z_size"]))) and args.obstacle:
+                or ((PROFILE_LOCATIONS[seq-1] < mm*CONSTANTS["nozzle"]["dist_z"]) and (mm*CONSTANTS["nozzle"]["dist_z"] < location))) and args.obstacle:
                 Nz = max(1,int(distance/1000))
             else:
                 Nz = 1
@@ -461,8 +434,7 @@ def main():
             plt.imshow(abs(u_new)**2,
                 cmap="hot",
                 aspect="equal",
-                extent=(-REGION_SIZE/2, REGION_SIZE/2, -REGION_SIZE/2, REGION_SIZE/2),
-                norm=LogNorm())
+                extent=(-REGION_SIZE/2, REGION_SIZE/2, -REGION_SIZE/2, REGION_SIZE/2),)
 
         length = time.time() - start
         print(f"\nCalculating profiles took {length} sec")
