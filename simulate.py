@@ -270,7 +270,7 @@ def WPM_schmidt_kernel(u, n, k0, k_perp2, dz, z, z_min, z_max):
 
         2. S. Schmidt et al., “Wave-optical modeling beyond the thin-element-approximation,” Opt. Express, vol. 24, no. 26, p. 30188, 2016.
     """
-    if z_min <= z <= z_max: # Stupid hardcoded optimizer
+    if (z_min <= z <= z_max) and args.obstacle: # Stupid hardcoded optimizer
         refractive_indexes = [np.complex64(1.0 + 0j), np.complex64(1.5 + 7j)]
     else:
         refractive_indexes = [np.complex64(1.0 + 0j)]
