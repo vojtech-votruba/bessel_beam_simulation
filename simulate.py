@@ -12,6 +12,7 @@ from numpy.lib.scimath import sqrt as csqrt
 import pyfftw
 from pyfftw.interfaces.scipy_fft import fft2, fftshift, ifft2
 from multiprocessing import cpu_count
+from matplotlib.colors import LogNorm
 from multiprocessing.pool import ThreadPool as Pool
 
 parser = argparse.ArgumentParser()
@@ -299,9 +300,11 @@ def wpm_2d(x, y, u_field,
     kx = get_k(x, flavour='+')
     ky = get_k(y, flavour='+')
 
-    KX, KY = np.meshgrid(kx, ky)
-    k_perp2 = ne.evaluate("KX**2 + KY**2")
+    def k_perp(kx=kx, ky=ky):
+        KX, KY = np.meshgrid(kx, ky)
+        return ne.evaluate("KX**2 + KY**2")
 
+    k_perp2 = k_perp()
     X,Y = np.meshgrid(x, y)
 
     width_edge = 0.95*(x[-1] - x[0]) / 2
@@ -434,8 +437,8 @@ def main():
             else:
                 distance = location - PROFILE_LOCATIONS[seq-1]
 
-            if ((seq == 0 and (CONSTANTS["nozzle"]["dist_z"] < location < CONSTANTS["nozzle"]["dist_z"] + CONSTANTS["nozzle"]["z_size"]))\
-                or ((PROFILE_LOCATIONS[seq-1] < CONSTANTS["nozzle"]["dist_z"]) and (location < CONSTANTS["nozzle"]["dist_z"] + CONSTANTS["nozzle"]["z_size"]))) and args.obstacle:
+            if ((seq == 0 and (CONSTANTS["nozzle"]["dist_z"]*mm < location < CONSTANTS["nozzle"]["dist_z"]*mm + mm*CONSTANTS["nozzle"]["z_size"]))\
+                or ((PROFILE_LOCATIONS[seq-1] < mm*CONSTANTS["nozzle"]["dist_z"]) and (location < CONSTANTS["nozzle"]["dist_z"]*mm + mm*CONSTANTS["nozzle"]["z_size"]))) and args.obstacle:
                 Nz = int(distance/1000)
             else:
                 Nz = 1
@@ -458,7 +461,8 @@ def main():
             plt.imshow(abs(u_new)**2,
                 cmap="hot",
                 aspect="equal",
-                extent=(-REGION_SIZE/2, REGION_SIZE/2, -REGION_SIZE/2, REGION_SIZE/2),)
+                extent=(-REGION_SIZE/2, REGION_SIZE/2, -REGION_SIZE/2, REGION_SIZE/2),
+                norm=LogNorm())
 
         length = time.time() - start
         print(f"\nCalculating profiles took {length} sec")
