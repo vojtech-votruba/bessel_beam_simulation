@@ -10,7 +10,7 @@ from diffractio.scalar_sources_XY import Scalar_field_XY
 from diffractio.utils_math import get_k
 from numpy.lib.scimath import sqrt as csqrt
 import pyfftw
-from pyfftw.interfaces.scipy_fft import fft2, fftshift, ifft2
+from scipy.fft import fft2, fftshift, ifft2
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool as Pool
 
@@ -240,12 +240,15 @@ def PWD_kernel(u, n, k0, k_perp2, dz):
 
     """
 
-    Ek = fft2(u, workers=nthreads, overwrite_x=True, planner_effort="FFTW_ESTIMATE")
-    Ek = fftshift(Ek)
-    H = ne.evaluate("exp(1j * dz * sqrt(n**2 * k0**2 - k_perp2))")
-    HEk = ne.evaluate("H * Ek")
-    HEK = fftshift(HEk)
-    result = ifft2(HEK, workers=nthreads, overwrite_x=True, planner_effort="FFTW_ESTIMATE")
+    def propagate(field, n=n, k0=k0, k_perp2 = k_perp2, dz=dz):
+        Ek = fft2(u, workers=nthreads, overwrite_x=True)
+        Ek = fftshift(Ek)
+        H = ne.evaluate("Ek*exp(1j * dz * sqrt(n**2 * k0**2 - k_perp2))")
+
+        return fftshift(H)
+
+    HEk = propagate(u)
+    result = ifft2(HEk, workers=nthreads, overwrite_x=True)
     
     return result
 
