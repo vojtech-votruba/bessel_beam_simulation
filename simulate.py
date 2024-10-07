@@ -10,17 +10,20 @@ from diffractio.scalar_sources_XY import Scalar_field_XY
 from diffractio.utils_math import get_k
 from numpy.lib.scimath import sqrt as csqrt
 import pyfftw
-from scipy.fft import fft2, fftshift, ifft2
+from pyfftw.interfaces.scipy_fft import fft2, fftshift, ifft2
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool as Pool
-
-nthreads = cpu_count()
-pyfftw.interfaces.cache.enable()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--obstacle", action=argparse.BooleanOptionalAction,
                     default="True", help="Do you want to add the obstacle to the simulation?")
 args = parser.parse_args()
+
+nthreads = cpu_count()
+pyfftw.interfaces.cache.enable()
+
+with open("config.json", encoding="utf-8") as f:
+    CONSTANTS = json.load(f)
 
 def adaptive_mesh(start: float, stop: float, w0: float, fn, delta: float, alpha=0.1):
     """
@@ -353,8 +356,6 @@ def main():
         the energy is inputed in joules, length of the pulse is in seconds,
         wavelength is in um.
         """
-        with open("config.json", encoding="utf-8") as f:
-            CONSTANTS = json.load(f)
 
         W0 = CONSTANTS["laser"]["radius"]
         TOTAL_ENERGY = CONSTANTS["laser"]["total_energy"]
@@ -366,7 +367,7 @@ def main():
         E0 = np.sqrt(I0) # Amplitude of the electric field in V/cm
 
         WAVELENGTH = CONSTANTS["laser"]["wavelength"] * um
-        SCALE = 1/3
+        SCALE = 1/20
         REGION_SIZE = CONSTANTS["region"]["size"] * SCALE
 
         Nx = 2 ** int(np.round(np.log2(1000*REGION_SIZE)))
