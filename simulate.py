@@ -280,7 +280,7 @@ def wpm_2d(x, y, u_field,
         return ne.evaluate("KX**2 + KY**2")
 
     k_perp2 = k_perp()
-    X,Y = np.meshgrid(x, y)
+    X,Y = np.ogrid[x[0]:x[-1]:len(x)*1j, y[0]:y[-1]:len(y)*1j]
 
     width_edge = 0.95*(x[-1] - x[0]) / 2
     x_center = (x[-1] + x[0]) / 2
@@ -295,8 +295,8 @@ def wpm_2d(x, y, u_field,
 
     z = z0
     if obstacle: 
-        n_field_normal = np.ones(X.shape, dtype=np.complex64)
-        n_field_bs = np.ones(X.shape, dtype=np.complex64)
+        n_field_normal = np.ones(u_field.shape, dtype=np.complex64)
+        n_field_bs = np.ones(u_field.shape, dtype=np.complex64)
         square = (abs(X) <= CONSTANTS['nozzle']['x_size']/2*mm) * (Y >= - CONSTANTS['nozzle']['dist_y']*mm)
         n_field_bs[square] = np.complex64(1.2 + 7j) # The refractive index of aluminum
 
@@ -306,7 +306,7 @@ def wpm_2d(x, y, u_field,
         n_field_bs[triangle2] = np.complex64(1.0 + 0j)
     
     else:
-        n_field = np.ones(X.shape, dtype=np.complex64)
+        n_field = np.ones(u_field.shape, dtype=np.complex64)
 
     for i in range(num_points):
         if obstacle:
@@ -345,11 +345,11 @@ def main():
         E0 = np.sqrt(I0) # Amplitude of the electric field in V/cm
 
         WAVELENGTH = CONSTANTS["laser"]["wavelength"] * um
-        SCALE = 1/2
+        SCALE = 1/3
         REGION_SIZE = CONSTANTS["region"]["size"] * SCALE
 
-        Nx = 2 ** int(np.round(np.log2(1000*REGION_SIZE)) - 3)
-        Ny = 2 ** int(np.round(np.log2(1000*REGION_SIZE)) - 3)
+        Nx = 2 ** int(np.round(np.log2(1000*REGION_SIZE)))
+        Ny = 2 ** int(np.round(np.log2(1000*REGION_SIZE)))
 
         print(f"In the x axis using {Nx/REGION_SIZE/1000} px/um with total of {Nx} px")
         print(f"In the y axis using {Ny/REGION_SIZE/1000} px/um with total of {Ny} px")
@@ -402,7 +402,7 @@ def main():
 
 
         for seq,location in enumerate(PROFILE_LOCATIONS):
-            print(f"Calulating the {seq+1}/{len(PROFILE_LOCATIONS)} profile in the location {location} mm with WPM")
+            print(f"Calulating the {seq+1}/{len(PROFILE_LOCATIONS)} profile in the location {location/1000} mm with WPM")
 
             if seq == 0:
                 #distance = location - (CONSTANTS["nozzle"]["dist_z"]-5)* mm
