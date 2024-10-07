@@ -432,8 +432,8 @@ def main():
             else:
                 distance = location - PROFILE_LOCATIONS[seq-1]
 
-            if (seq == 0 and (CONSTANTS["nozzle"]["dist_z"] < location < CONSTANTS["nozzle"]["dist_z"] + CONSTANTS["nozzle"]["z_size"]))\
-                or ((PROFILE_LOCATIONS[seq-1] < CONSTANTS["nozzle"]["dist_z"]) and (location < CONSTANTS["nozzle"]["dist_z"] + CONSTANTS["nozzle"]["z_size"])):
+            if ((seq == 0 and (CONSTANTS["nozzle"]["dist_z"] < location < CONSTANTS["nozzle"]["dist_z"] + CONSTANTS["nozzle"]["z_size"]))\
+                or ((PROFILE_LOCATIONS[seq-1] < CONSTANTS["nozzle"]["dist_z"]) and (location < CONSTANTS["nozzle"]["dist_z"] + CONSTANTS["nozzle"]["z_size"]))) and args.obstacle:
                 Nz = int(distance/1000)
             else:
                 Nz = 1
