@@ -308,10 +308,12 @@ def wpm_2d(x, y, u_field,
     x_center = (x[-1] + x[0]) / 2
     y_center = (y[-1] + y[0]) / 2
 
-    filter_x = ne.evaluate("exp(-(abs(X - x_center) / width_edge) ** 20)")
-    filter_x = ne.evaluate("exp(-(abs(X - x_center) / width_edge) ** 20)")
-    filter_y = ne.evaluate("exp(-(abs(Y - y_center) / width_edge) ** 20)")
-    filter_function = ne.evaluate("filter_x * filter_y")
+    def filter(X=X, x_center=x_center, width_edge=width_edge, Y=Y, y_center=y_center):
+        filter_x = ne.evaluate("exp(-(abs(X - x_center) / width_edge) ** 20)")
+        filter_y = ne.evaluate("exp(-(abs(Y - y_center) / width_edge) ** 20)")
+        return ne.evaluate("filter_x * filter_y")
+    
+    filter_function = filter()
 
     z = z0
     for i in range(num_points):
