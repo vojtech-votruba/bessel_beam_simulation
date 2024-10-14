@@ -112,7 +112,7 @@ class Scalar_source_XY(Scalar_field_XY):
         super().__init__(x, y, wavelength, info)
         self.type = 'Scalar_source_XY'
 
-    ##@profile
+    @profile
     def plane_wave(self, A=1, theta=0 * degrees, phi=0 * degrees, z0=0 * um):
         """Plane wave. self.u = A * exp(1j * k *
                          (self.X * sin(theta) * cos(phi) +
@@ -220,7 +220,7 @@ class Scalar_mask_XY(Scalar_field_XY):
             self.u = u_mask * \
                 ne.evaluate("exp(-1j * k * (refractive_index - 1) * r * tan(angle)) * t_off_axis").astype(np.complex64)
 
-#@profile
+@profile
 def PWD_kernel(u, n, k0, k_perp2, dz):
     """
     Step for scalar(TE) Plane wave decomposition(PWD) algorithm.
@@ -252,7 +252,7 @@ def PWD_kernel(u, n, k0, k_perp2, dz):
     
     return result
 
-#@profile
+@profile
 def WPM_schmidt_kernel(u, n, k0, k_perp2, dz, z, z_min, z_max):
     """
     Kernel for fast propagation of WPM method
@@ -284,7 +284,7 @@ def WPM_schmidt_kernel(u, n, k0, k_perp2, dz, z, z_min, z_max):
 
     return u_final
 
-#@profile
+@profile
 def wpm_2d(x, y, u_field,
         num_points: int, wavelength: float, z0: float,
         z_final: float, obstacle,):
