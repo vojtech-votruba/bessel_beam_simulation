@@ -10,7 +10,7 @@ from diffractio.scalar_sources_XY import Scalar_field_XY
 from diffractio.utils_math import get_k
 from numpy.lib.scimath import sqrt as csqrt
 import pyfftw
-from pyfftw.interfaces.scipy_fft import fft2, fftshift, ifft2
+from pyfftw.interfaces.scipy_fft import fft2, ifft2
 from multiprocessing import cpu_count
 from matplotlib.colors import LogNorm
 from multiprocessing.pool import ThreadPool as Pool
@@ -25,6 +25,28 @@ pyfftw.interfaces.cache.enable()
 
 with open("config.json", encoding="utf-8") as f:
     CONSTANTS = json.load(f)
+
+"""
+All of the constants for this simulation are stored in the config.json file.
+
+The length dimensions used are inputed in millimeters,
+the energy is inputed in joules, length of the pulse is in seconds,
+wavelength is in um.
+"""
+
+W0 = CONSTANTS["laser"]["radius"]
+TOTAL_ENERGY = CONSTANTS["laser"]["total_energy"]
+TOTAL_SURFACE = CONSTANTS["laser"]["total_surface"]
+ENERGY = TOTAL_ENERGY / TOTAL_SURFACE * np.pi * W0**2
+AT = CONSTANTS["laser"]["pulse_length"]
+POWER = 2*np.sqrt(np.log(2)/np.pi) * ENERGY/AT
+I0 = POWER / (np.pi*W0**2)*100 # Intensity of the incoming plane wave in W/cm^2; I ~ E^2
+E0 = np.sqrt(I0) # Amplitude of the electric field in V/cm
+
+WAVELENGTH = CONSTANTS["laser"]["wavelength"] * um
+SCALE = 1/2
+REGION_SIZE = CONSTANTS["region"]["size"] * SCALE
+
 
 def adaptive_mesh(start: float, stop: float, w0: float, fn, delta: float, alpha=0.1):
     """
@@ -88,6 +110,15 @@ def __init__new(self, x=None, y=None, wavelength=None, info=""):
     self.type = 'Scalar_field_XY'
     self.quality = 0
 
+def fftshift(x):
+    rows, cols = x.shape
+    row_shift = rows // 2
+    col_shift = cols // 2
+    
+    x[:row_shift, :col_shift], x[row_shift:, col_shift:] = x[row_shift:, col_shift:].copy(), x[:row_shift, :col_shift].copy()
+    x[:row_shift, col_shift:], x[row_shift:, :col_shift] = x[row_shift:, :col_shift].copy(), x[:row_shift, col_shift:].copy()
+    
+    return x
 
 Scalar_field_XY.__init__ = __init__new
 
@@ -112,7 +143,7 @@ class Scalar_source_XY(Scalar_field_XY):
         super().__init__(x, y, wavelength, info)
         self.type = 'Scalar_source_XY'
 
-    ##@profile
+    @profile
     def plane_wave(self, A=1, theta=0 * degrees, phi=0 * degrees, z0=0 * um):
         """Plane wave. self.u = A * exp(1j * k *
                          (self.X * sin(theta) * cos(phi) +
@@ -220,7 +251,7 @@ class Scalar_mask_XY(Scalar_field_XY):
             self.u = u_mask * \
                 ne.evaluate("exp(-1j * k * (refractive_index - 1) * r * tan(angle)) * t_off_axis").astype(np.complex64)
 
-#@profile
+@profile
 def PWD_kernel(u, n, k0, k_perp2, dz):
     """
     Step for scalar(TE) Plane wave decomposition(PWD) algorithm.
@@ -241,18 +272,20 @@ def PWD_kernel(u, n, k0, k_perp2, dz):
     """
 
     def propagate(field, n=n, k0=k0, k_perp2 = k_perp2, dz=dz):
-        Ek = fft2(u, workers=nthreads, overwrite_x=True)
+        #Ek = fft2(u, workers=nthreads, overwrite_x=True, auto_align_input=False, auto_contiguous=False)
+        Ek = np.fft.fft2(u)
         Ek = fftshift(Ek)
         H = ne.evaluate("Ek*exp(1j * dz * sqrt(n**2 * k0**2 - k_perp2))")
 
         return fftshift(H)
 
     HEk = propagate(u)
-    result = ifft2(HEk, workers=nthreads, overwrite_x=True)
-    
+    #result = ifft2(HEk, workers=nthreads, overwrite_x=True, auto_align_input=False, auto_contiguous=False)
+    result = np.fft.ifft2(HEk)
+
     return result
 
-#@profile
+@profile
 def WPM_schmidt_kernel(u, n, k0, k_perp2, dz, z, z_min, z_max):
     """
     Kernel for fast propagation of WPM method
@@ -271,7 +304,7 @@ def WPM_schmidt_kernel(u, n, k0, k_perp2, dz, z, z_min, z_max):
         2. S. Schmidt et al., “Wave-optical modeling beyond the thin-element-approximation,” Opt. Express, vol. 24, no. 26, p. 30188, 2016.
     """
     if (z_min <= z <= z_max) and args.obstacle: # Stupid hardcoded optimizer
-        refractive_indexes = [np.complex64(1.0 + 0j), np.complex64(1.5 + 7j)]
+        refractive_indexes = [np.complex64(1.0 + 0j), np.complex64(1.2 + 7j)]
     else:
         refractive_indexes = [np.complex64(1.0 + 0j)]
 
@@ -284,7 +317,7 @@ def WPM_schmidt_kernel(u, n, k0, k_perp2, dz, z, z_min, z_max):
 
     return u_final
 
-#@profile
+@profile
 def wpm_2d(x, y, u_field,
         num_points: int, wavelength: float, z0: float,
         z_final: float, obstacle,):
@@ -318,13 +351,14 @@ def wpm_2d(x, y, u_field,
     if obstacle: 
         n_field_normal = np.ones(u_field.shape, dtype=np.complex64)
         n_field_bs = np.ones(u_field.shape, dtype=np.complex64)
-        square = (abs(Y) <= CONSTANTS['nozzle']['x_size']/2*mm) * (X >= - CONSTANTS['nozzle']['dist_y']*mm)
+        square = (abs(Y) <= CONSTANTS['nozzle']['x_size']/2*mm) * (X >= - CONSTANTS['nozzle']['dist_y']*SCALE*mm)
         n_field_bs[square] = np.complex64(1.2 + 7j) # The refractive index of aluminum
 
-        triangle1 = X <= Y + (-CONSTANTS['nozzle']['dist_y'] - CONSTANTS['nozzle']['slope_upper']/2)*mm
-        triangle2 = X <= -Y + (-CONSTANTS['nozzle']['dist_y'] - CONSTANTS['nozzle']['slope_upper']/2)*mm
+        triangle1 = X <= Y + (-CONSTANTS['nozzle']['dist_y']*SCALE - CONSTANTS['nozzle']['slope_upper']/2)*mm
+        triangle2 = X <= -Y + (-CONSTANTS['nozzle']['dist_y']*SCALE - CONSTANTS['nozzle']['slope_upper']/2)*mm
         n_field_bs[triangle1] = np.complex64(1.0 + 0j)
         n_field_bs[triangle2] = np.complex64(1.0 + 0j)
+
     else:
         n_field = np.ones(u_field.shape, dtype=np.complex64)
 
@@ -332,7 +366,6 @@ def wpm_2d(x, y, u_field,
         if obstacle:
             if CONSTANTS["nozzle"]["dist_z"]*mm <= z <= CONSTANTS["nozzle"]["dist_z"]*mm + CONSTANTS["nozzle"]["z_size"]*mm:
                 n_field = n_field_bs
-                print("reached the obstacle territory.")
             else:
                 n_field = n_field_normal
 
@@ -348,29 +381,8 @@ def wpm_2d(x, y, u_field,
 
 def main():
     try:
-        """
-        All of the constants for this simulation are stored in the config.json file.
-
-        The length dimensions used are inputed in millimeters,
-        the energy is inputed in joules, length of the pulse is in seconds,
-        wavelength is in um.
-        """
-
-        W0 = CONSTANTS["laser"]["radius"]
-        TOTAL_ENERGY = CONSTANTS["laser"]["total_energy"]
-        TOTAL_SURFACE = CONSTANTS["laser"]["total_surface"]
-        ENERGY = TOTAL_ENERGY / TOTAL_SURFACE * np.pi * W0**2
-        AT = CONSTANTS["laser"]["pulse_length"]
-        POWER = 2*np.sqrt(np.log(2)/np.pi) * ENERGY/AT
-        I0 = POWER / (np.pi*W0**2)*100 # Intensity of the incoming plane wave in W/cm^2; I ~ E^2
-        E0 = np.sqrt(I0) # Amplitude of the electric field in V/cm
-
-        WAVELENGTH = CONSTANTS["laser"]["wavelength"] * um
-        SCALE = 1/4
-        REGION_SIZE = CONSTANTS["region"]["size"] * SCALE
-
-        Nx = 2 ** int(np.round(np.log2(1000*REGION_SIZE)))
-        Ny = 2 ** int(np.round(np.log2(1000*REGION_SIZE)))
+        Nx = 2 ** int(np.round(np.log2(500*REGION_SIZE)))
+        Ny = 2 ** int(np.round(np.log2(500*REGION_SIZE)))
 
         print(f"In the x axis using {Nx/REGION_SIZE/1000} px/um with total of {Nx} px")
         print(f"In the y axis using {Ny/REGION_SIZE/1000} px/um with total of {Ny} px")
@@ -419,7 +431,7 @@ def main():
 
         start = time.time()
         # Propagation through the obstacle
-        PROFILE_LOCATIONS = [(CONSTANTS["nozzle"]["dist_z"]-2)*mm*SCALE, (CONSTANTS["nozzle"]["dist_z"]+2)*mm*SCALE, 85*mm*SCALE, 100*mm*SCALE]
+        PROFILE_LOCATIONS = [(CONSTANTS["nozzle"]["dist_z"]-1)*mm, (CONSTANTS["nozzle"]["dist_z"]+5)*mm, 50*mm]
 
 
         for seq,location in enumerate(PROFILE_LOCATIONS):
