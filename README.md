@@ -10,16 +10,17 @@ Firstly, you should install the used libraries via
 ```
 pip install -r /path/to/bessel-beam-simulation/requirements.txt
 ```
-If you use conda, you need to write
-```
-conda install --yes --file /path/to/bessel-beam-simulation/requirements.txt
-```
-I highly encourage using a virutal environment for this. diffractio as a library isn't particullary stable, and you don't want to mess up your python installation.
+I tested the requirements on Python 3.12, and I am not entirely sure if they work on other versions.
+I also highly encourage using a virutal environment for this. diffractio as a library isn't particullary stable, and you don't want to mess up your python installation.
 
 After you installed the libraries you should be ready to go. For simulate.py there is an option to use the argument `--obstacle` or `--no-obstacle`
 to run the simulation with the plasma nozzle.
 
 All constants and parameters used in the simulation are stored in config.json file.
+
+# Possible improvements
+- Implement an propagation algorithm with an adaptive grid, e.g. CZT?
+- Find a larger computer with more RAM
 
 # Things to be aware of in diffractio
 - Refractive index vs. Refraction index
