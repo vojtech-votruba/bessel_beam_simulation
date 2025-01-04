@@ -3,3 +3,4 @@ X_gridsource.dat
 Y_gridsource.dat
 simulate.py.lprof
 .venv
+__pycache__
